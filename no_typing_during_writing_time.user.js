@@ -1,11 +1,10 @@
 // ==UserScript==
-// @name        no typing during writing time
+// @name        __no typing during writing time
 // @include     http://*
 // @include     https://*
 // @exclude     file://*
-// @version     1
 // @grant       none
-// ==/UserScript
+// ==/UserScript==
 
 //[][][] features to add:
 //use a GUI to set blacklist and whitelist site+time values, instead of having to edit this script
@@ -20,22 +19,23 @@
 //2015-09-17 somehow this blocks desktop files. hmm...
 
 var today = new Date();
-var workdaystart = new Date(0,0,0,5,0,0,0);
+var workdaystart = new Date(0,0,0,4,0,0,0);
 var workdayend = new Date(0,0,0,8,0,0,0);
 var weekendworkdayend = new Date(0,0,0,9,0,0,0);
 //set the end of work day to weekend time if the day is Saturday or Sunday
-if(today.getDay() == 6 || today.getDay() == 0)
+if(today.getDay() == 6 || today.getDay() === 0)
 	workdayend = weekendworkdayend;
 ///////////////////////////
 /////////BLACKLIST/////////
 ///////////////////////////
 var siteblacklist = [];
-siteblacklist.push(["",new Date(0,0,0,0,0,0,0),new Date(0,0,0,5,0,0,0)]);
+siteblacklist.push(["",new Date(0,0,0,0,0,0,0),new Date(0,0,0,4,0,0,0)]);
 //siteblacklist.push(["",new Date(0,0,0,11,40,0,0),new Date(0,0,0,13,0,0,0)]);
 //siteblacklist.push(["",new Date(0,0,0,8,0,0,0),new Date(0,0,0,11,0,0,0)]);
 siteblacklist.push(["",new Date(0,0,0,21,0,0,0),new Date(0,0,0,23,59,59,0)]);
 	//2016-03-19 daylight savings time ha
-siteblacklist.push(["newgrounds.com",new Date(0,0,0,0,0,0,0),new Date(0,0,0,23,59,59,0)]);
+//siteblacklist.push(["newgrounds.com",new Date(0,0,0,0,0,0,0),new Date(0,0,0,23,59,59,0)]);
+//siteblacklist.push(["prismata.net",new Date(0,0,0,0,0,0,0),new Date(0,0,0,23,59,59,0)]);
 ///////////////////////////
 /////////WHITELIST/////////
 ///////////////////////////
@@ -46,6 +46,57 @@ sitewhitelist.push(["duckduckgo.com",new Date(0,0,0,5,0,0,0),new Date(0,0,0,19,5
 ///////////////////////////
 ///////////////////////////
 
+///////////////////////////
+///////REDIRECT LIST///////
+///////////////////////////
+var redirectlist = [];
+//[][][]redirectlist.push(["prismata.net","https://www.overdrive.com/"]);
+//redirectlist.push(["test.net","prismata.net"]);
+
+redirectmain(redirectlist);
+overlaymain(sitewhitelist,siteblacklist);
+
+function redirectmain(redirectlist)
+{
+	var stoplist = makeRedirectBlacklist(redirectlist);
+	//console.log(stoplist);
+	//console.log(redirectlist);
+	var address = document.location.href;
+	//console.log(stoplist.indexOf(address));
+	for (var i=0;i<stoplist.length;i++)
+	{
+		if (address.indexOf(stoplist[i]) !== -1)
+		{
+			alert("check redirect list for redirect loops");
+			return;
+		}
+	}
+	for (i=0;i<redirectlist.length;i++)
+	{
+		if (address.indexOf(redirectlist[i][0]) !== -1)
+		{
+			window.location.replace(redirectlist[i][1]);
+			return;
+		}
+	}
+	return;
+}
+function makeRedirectBlacklist(redirectlist) // don't redirect to a page on the
+{
+	var checklist = [];
+	var stoplist = [];
+	for (i=0;i<redirectlist.length;i++)
+		checklist.push(redirectlist[i][0]);
+	for (i=0;i<redirectlist.length;i++)
+	{
+		if (checklist.indexOf(redirectlist[i][1]) !== -1)
+		{
+			stoplist.push(redirectlist[i][0]);
+			stoplist.push(redirectlist[i][1]);
+		}
+	}
+	return stoplist;
+}
 
 //document.body.innerHTML = document.location.href;
 //var address = document.location.href;
@@ -53,6 +104,8 @@ sitewhitelist.push(["duckduckgo.com",new Date(0,0,0,5,0,0,0),new Date(0,0,0,19,5
 //document.body.innerHTML = address.indexOf("about:reader");
 //return;
 
+function overlaymain(sitewhitelist, siteblacklist)
+{
 //create html elements
 	var overlay = document.createElement('div');
 		overlay.id = 'BlockScreen';
@@ -76,11 +129,11 @@ sitewhitelist.push(["duckduckgo.com",new Date(0,0,0,5,0,0,0),new Date(0,0,0,19,5
 	window.allowAccess = function()
 	{
 		document.getElementById('BlockScreen').style.display = 'none';
-	}
+	};
 	window.denyAccess = function()
 	{
 		document.getElementById('BlockScreen').style.display = 'inline';
-	}
+	};
 	
 	document.getElementsByTagName('body')[0].appendChild(overlay);
 	//allowAccess();
@@ -112,7 +165,7 @@ sitewhitelist.push(["duckduckgo.com",new Date(0,0,0,5,0,0,0),new Date(0,0,0,19,5
 				}
 			}
 			//then if the page is on any blacklist at this time, block the page
-			if(whitelisted == 0)
+			if(whitelisted === 0)
 			{
 				for (var i=0;i<siteblacklist.length;i++)
 				{
@@ -137,12 +190,14 @@ sitewhitelist.push(["duckduckgo.com",new Date(0,0,0,5,0,0,0),new Date(0,0,0,19,5
 						{
 							allowAccess();
 							var list=document.getElementById('BlockScreen');
-							if (list.childNodes[0] !== null)
-								list.removeChild(list.childNodes[0]);
+                            if (list.childNodes.length > 0)
+                                if (list.childNodes[0] !== null)
+                                    list.removeChild(list.childNodes[0]);
 						}
 					}
 				}
 			}
-		}
-		,1000 //2 seconds is juuuust enough to peek at a dictionary search when I'm writing
-	);
+		} ,1000 //2 seconds is juuuust enough to peek at a dictionary search when I'm writing
+    );
+	return;
+}
